@@ -47,15 +47,26 @@ function fadeOutObject(object, callback) {
 function animatePointAndArrow(startX, startY, endX, endY) {
     const point = createPoint(startX, startY);
     const arrow = createArrow(startX, startY, endX, endY);
-    point.material.transparent = true;
-    arrow.material.transparent = true;
+
+    // Set transparent property for point's material
+    if (point.material) {
+        point.material.transparent = true;
+    }
+
+    // For ArrowHelper, handle transparency differently
+    if (arrow instanceof THREE.ArrowHelper) {
+        arrow.line.material.transparent = true;
+        arrow.cone.material.transparent = true;
+    }
+
     scene.add(point);
     scene.add(arrow);
 
     // Fade out after 5 seconds
     setTimeout(() => {
         fadeOutObject(point);
-        fadeOutObject(arrow);
+        fadeOutObject(arrow.line); // Fade out line of the arrow
+        fadeOutObject(arrow.cone); // Fade out cone of the arrow
     }, 5000);
 }
 
