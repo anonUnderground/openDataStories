@@ -1,9 +1,8 @@
 # Dependency directories
 node_modules/
 
-# Generated files and directories
-/dist/
-/bundle.js
+# Generated files
+/dist/bundle.js
 
 # OS generated files
 .DS_Store
@@ -38,3 +37,6 @@ __pycache__/
 # dotenv environment variable files
 .env
 .env.*
+
+# Ignore the generated JavaScript bundle
+/dist/bundle.js
