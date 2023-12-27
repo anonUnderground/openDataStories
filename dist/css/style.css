@@ -1,0 +1,16 @@
+/* Style for the 3D animation container */
+#animationBox {
+    width: 50%; /* Width reduced to 50% */
+    height: 50vh; /* Height reduced to 50% of the viewport height */
+    background-color: #000000; /* Black background */
+    margin: auto; /* Center the box horizontally */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    /* Additional styles for centering vertically */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
