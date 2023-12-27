@@ -1,7 +1,0 @@
-/* Simple CSS to define the size and appearance of the animation container */
-#animationBox {
-    width: 800px;
-    height: 600px;
-    margin: auto;
-    background-color: #eee;
-}

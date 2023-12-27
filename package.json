@@ -1,0 +1,27 @@
+{
+  "name": "opendatastories",
+  "version": "1.0.0",
+  "description": "Project to explore JS animations for open source public data from governmental open data initiatives",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anonUnderground/openDataStories.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/anonUnderground/openDataStories/issues"
+  },
+  "homepage": "https://github.com/anonUnderground/openDataStories#readme",
+  "dependencies": {
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "webpack": "^5.89.0",
+    "webpack-cli": "^5.1.4"
+  }
+}
