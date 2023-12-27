@@ -27,8 +27,6 @@ npm install
 
 ## Usage
 
-### To run the application locally:
-
 1. Open your chosen terminal and navigate to the project's root directory
 
 '''cd path/to/openDataStories''''
