@@ -1,0 +1,40 @@
+# Dependency directories
+node_modules/
+
+# Generated files and directories
+/dist/
+/bundle.js
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Editor directories and files
+.idea/
+*.sublime-workspace
+*.sublime-project
+.vscode/
+
+# Logs
+logs
+*.log
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional artifacts
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.class
+
+# Production build files
+/build/
+
+# dotenv environment variable files
+.env
+.env.*
