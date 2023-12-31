@@ -4,12 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Points and Arrows Animation</title>
-    <link rel="stylesheet" href="css/style.css"> <!-- Link to your CSS file -->
+    <!-- Link to your CSS file with a placeholder for version -->
+    <link rel="stylesheet" href="css/style.css?v=version_placeholder"> 
 </head>
 <body>
     <div id="animationBox"></div> <!-- Container for the 3D scene -->
 
-    <!-- Link to the bundled JavaScript file (Webpack output) -->
-    <script src="bundle.js"></script>
+    <!-- Placeholder script tag for your JavaScript file -->
+    <script src="bundle.js?v=version_placeholder"></script>
+
+    <!-- Inline script to automate cache busting -->
+    <script>
+        // Function to update the version placeholders
+        function updateAssetPaths() {
+            // Use current timestamp as version
+            var version = new Date().getTime();
+
+            // Update the href of the stylesheet
+            var stylesheet = document.querySelector('link[href*="style.css"]');
+            stylesheet.href = stylesheet.href.replace('version_placeholder', version);
+
+            // Update the src of the script
+            var script = document.querySelector('script[src*="bundle.js"]');
+            script.src = script.src.replace('version_placeholder', version);
+        }
+
+        // Run the function on load
+        updateAssetPaths();
+    </script>
 </body>
 </html>
