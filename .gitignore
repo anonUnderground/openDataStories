@@ -40,3 +40,8 @@ __pycache__/
 
 # Ignore the generated JavaScript bundle
 /dist/bundle.js
+
+# Custom data folders
+data/
+dist/data/processed/
+dist/data/raw/

@@ -9,14 +9,37 @@ var scene = new THREE.Scene();
 var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 var renderer = new THREE.WebGLRenderer();
 renderer.setSize(document.getElementById('animationBox').clientWidth, document.getElementById('animationBox').clientHeight);
+renderer.setClearColor(0x000000); // Initial background color (black for night)
 document.getElementById('animationBox').appendChild(renderer.domElement);
 
-// Set the camera position
-camera.position.set(15, 15, 15);
-camera.lookAt(scene.position);
+// Global variable to toggle camera mode
+var isFixedCamera = true; // Set to true for fixed camera, false for free cam
 
-// Adding OrbitControls
+// Constants for scaling
+const scaleX = 1000; // Adjust these based on your scene
+const scaleZ = 1000;
+
+// Center coordinates (latitude and longitude)
+const centerLat = 30.268485;
+const centerLong = -97.74091;
+
+// Function to convert lat/long to scene coordinates with an offset
+function latLongToScene(lat, long, offsetX, offsetZ) {
+    const x = (long - centerLong) * scaleX - offsetX;
+    const z = (lat - centerLat) * scaleZ - offsetZ;
+    return { x, z };
+}
+
+// Calculate the offset based on the center coordinates
+const centerOffset = latLongToScene(centerLat, centerLong, 0, 0);
+
+// Set the camera position
+camera.position.set(30, 30, 30);
+camera.lookAt(0, 0, 0); // Look at the origin
+
+// Setup OrbitControls
 const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0); // Set the target to the origin
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
 
@@ -38,6 +61,22 @@ scene.add(gridHelper);
 const axesHelper = new THREE.AxesHelper(5);
 scene.add(axesHelper);
 
+// Function to handle the fade out animation
+function fadeOutObject(object, callback) {
+    let opacity = 1, step = 0.01;
+    const fade = () => {
+        if (opacity <= 0) {
+            scene.remove(object);
+            if (callback) callback();
+        } else {
+            requestAnimationFrame(fade);
+            object.material.opacity = opacity;
+            opacity -= step;
+        }
+    };
+    fade();
+}
+
 // Function to create a point on the X-Z plane
 function createPoint(x, z, color = 0xff0000) {
     const geometry = new THREE.SphereGeometry(0.2, 32, 32);
@@ -52,8 +91,9 @@ function createArchPath(startX, startZ, endX, endZ) {
     // Calculate the distance between the start and end points
     const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endZ - startZ, 2));
     
-    // Set the height of the arch proportional to the distance (you can adjust the factor)
-    const archHeight = Math.min(distance * 0.5, 10); // Limits the height to a maximum value
+    // Use an exponential function to calculate the arch height
+    // Adjust the exponent and coefficient as needed for desired effect
+    const archHeight = Math.min(Math.pow(distance, 1.5) * 0.1, 30); // Limits the height to a maximum value
 
     const curve = new THREE.QuadraticBezierCurve3(
         new THREE.Vector3(startX, 0, startZ),
@@ -73,77 +113,106 @@ function createArrow(startX, startZ, endX, endZ, color = 0x0000ff) {
     return mesh;
 }
 
-// Function to handle the fade out animation
-function fadeOutObject(object, callback) {
-    let opacity = 1, step = 0.01;
-    const fade = () => {
-        if (opacity <= 0) {
-            scene.remove(object);
-            if (callback) callback();
-        } else {
-            requestAnimationFrame(fade);
-            object.material.opacity = opacity;
-            opacity -= step;
-        }
-    };
-    fade();
-}
+// Function to animate a point and an arrow using lat/long
+function animatePointAndArrow(startLat, startLong, endLat, endLong) {
+    const startCoords = latLongToScene(startLat, startLong, centerOffset.x, centerOffset.z);
+    const endCoords = latLongToScene(endLat, endLong, centerOffset.x, centerOffset.z);
 
-// Function to animate a point and an arrow
-function animatePointAndArrow(startX, startZ, endX, endZ) {
-    const startPoint = createPoint(startX, startZ);
-    const endPoint = createPoint(endX, endZ); // Create a point at the end coordinates
-    const arrow = createArrow(startX, startZ, endX, endZ);
+    const startPoint = createPoint(startCoords.x, startCoords.z);
+    const endPoint = createPoint(endCoords.x, endCoords.z);
+    const arrow = createArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
 
     scene.add(startPoint);
-    scene.add(endPoint); // Add the end point to the scene
+    scene.add(endPoint);
     scene.add(arrow);
 
-    console.log(`Added points and arrow: start (${startX}, ${startZ}), end (${endX}, ${endZ})`);
+    console.log(`Added points and arrow: start (${startLat}, ${startLong}), end (${endLat}, ${endLong})`);
 
     // Fade out after 5 seconds
     setTimeout(() => {
         fadeOutObject(startPoint);
         fadeOutObject(endPoint);
         fadeOutObject(arrow);
-    }, 5000);
+    }, 1000);
 }
 
-// Function to load points from the JSON file and animate them
-function loadAndAnimatePoints() {
-    fetch('data/points.json')
+// Function to load kiosk paths from the JSON file and animate them
+function loadAndAnimateKioskPaths() {
+    fetch('data/processed/kiosk_vis_paths.json')
         .then(response => response.json())
-        .then(points => {
-            console.log("Loaded Points:", points); // Print the JSON data to the console
+        .then(paths => {
+            console.log("Loaded Kiosk Paths:", paths);
 
-            points.forEach((point, index) => {
+            paths.forEach((path, index) => {
                 setTimeout(() => {
-                    animatePointAndArrow(point.start_x, point.start_z, point.end_x, point.end_z);
-                }, index * 500); // Half-second interval between animations
+                    animatePointAndArrow(path.Start_Lat, path.Start_Long, path.End_Lat, path.End_Long);
+                }, index * 10); // Adjust timing as needed
             });
         })
         .catch(error => {
-            console.error("Error loading points:", error);
+            console.error("Error loading kiosk paths:", error);
         });
 }
 
-// Starting the animation sequence
-loadAndAnimatePoints();
+// Function to create and add a kiosk object to the scene
+function addKiosk(lat, long, color = 0x00ff00) {
+    lat = parseFloat(lat);
+    long = parseFloat(long);
+    const { x, z } = latLongToScene(lat, long, centerOffset.x, centerOffset.z);
 
-// Updated animation loop
+    // Define the geometry for the kiosk
+    const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+    const material = new THREE.MeshLambertMaterial({ color });
+    const kiosk = new THREE.Mesh(geometry, material);
+
+    // Set the position of the kiosk with the offset
+    kiosk.position.set(x, 0, z);
+
+    // Add the kiosk to the scene
+    scene.add(kiosk);
+}
+
+// Function to load kiosk points from a JSON file and add them to the scene
+function loadAndAddKiosks() {
+    fetch('data/processed/kiosk_coords.json')
+        .then(response => response.json())
+        .then(kiosks => {
+            console.log("Loaded Kiosks:", kiosks);
+
+            kiosks.forEach(kiosk => {
+                // Convert latitude and longitude to x and z coordinates
+                addKiosk(kiosk.latitude, kiosk.longitude);
+            });
+        })
+        .catch(error => {
+            console.error("Error loading kiosks:", error);
+        });
+}
+
+// Call the loadAndAddKiosks function to add kiosks to the scene
+loadAndAddKiosks();
+
+// Starting the animation sequence with a 5-second delay
+setTimeout(() => {
+    loadAndAnimateKioskPaths();
+}, 5000);
+
+// Updated animation loop with day/night cycle
 function animate() {
     requestAnimationFrame(animate);
 
-    // Update the rotation angle
-    angle += 0.005; // Adjust the speed of rotation by changing this value
+    // Update camera for fixed camera mode
+    if (isFixedCamera) {
+        angle += 0.005;
+        const radius = 15;
+        camera.position.x = radius * Math.cos(angle);
+        camera.position.z = radius * Math.sin(angle);
+    }
 
-    // Calculate the new camera position
-    const radius = 15; // Distance from the origin
-    camera.position.x = radius * Math.cos(angle);
-    camera.position.z = radius * Math.sin(angle);
-    camera.lookAt(scene.position); // Ensure the camera always looks at the origin
+    camera.lookAt(0, 0, 0); // Keep camera focused on center
 
-    controls.update();
+    controls.update(); // Update controls
+
     renderer.render(scene, camera);
 }
 animate();
