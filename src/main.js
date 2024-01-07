@@ -13,7 +13,7 @@ renderer.setClearColor(0x000000); // Initial background color (black for night)
 document.getElementById('animationBox').appendChild(renderer.domElement);
 
 // Global variable to toggle camera mode
-var isFixedCamera = true; // Set to true for fixed camera, false for free cam
+var isFixedCamera = false; // Set to true for fixed camera, false for free cam
 
 // Constants for scaling
 const scaleX = 1000; // Adjust these based on your scene
@@ -113,14 +113,41 @@ function createArrow(startX, startZ, endX, endZ, color = 0x0000ff) {
     return mesh;
 }
 
+// Function to create a straight line
+function createStraightLine(startX, startZ, endX, endZ, color = 0x00ff00) {
+    const material = new THREE.LineBasicMaterial({ color });
+    const points = [];
+    points.push(new THREE.Vector3(startX, 0, startZ));
+    points.push(new THREE.Vector3(endX, 0, endZ));
+
+    const geometry = new THREE.BufferGeometry().setFromPoints(points);
+    const line = new THREE.Line(geometry, material);
+    return line;
+}
+
 // Function to animate a point and an arrow using lat/long
 function animatePointAndArrow(startLat, startLong, endLat, endLong) {
     const startCoords = latLongToScene(startLat, startLong, centerOffset.x, centerOffset.z);
     const endCoords = latLongToScene(endLat, endLong, centerOffset.x, centerOffset.z);
 
+    console.log(`Start coordinates: ${startCoords.x}, ${startCoords.z}`);
+    console.log(`End coordinates: ${endCoords.x}, ${endCoords.z}`);
+
     const startPoint = createPoint(startCoords.x, startCoords.z);
     const endPoint = createPoint(endCoords.x, endCoords.z);
-    const arrow = createArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
+    
+    // Calculate distance
+    const distance = Math.sqrt(Math.pow(endCoords.x - startCoords.x, 2) + Math.pow(endCoords.z - startCoords.z, 2));
+    console.log(`Distance: ${distance}`);
+
+    let arrow;
+    if (distance < 15) { //adjust to be lower to create less lines and more archs
+        console.log("Creating a straight line arrow");
+        arrow = createStraightLine(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
+    } else {
+        console.log("Creating an arching arrow");
+        arrow = createArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
+    }
 
     scene.add(startPoint);
     scene.add(endPoint);
@@ -215,4 +242,5 @@ function animate() {
 
     renderer.render(scene, camera);
 }
+
 animate();
