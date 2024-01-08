@@ -23,6 +23,16 @@ const scaleZ = 1000;
 const centerLat = 30.268485;
 const centerLong = -97.74091;
 
+// Define cutoff distances
+const shortCutoffDistanceKm = 1.481499875685591; // Short distance cutoff in kilometers
+const highCutoffDistanceKm = 2.6459084063331675; // High distance cutoff in kilometers
+
+const degreesPerKm = 1 / 111; // Roughly 111 km per degree of latitude
+const shortCutoffDistanceDegrees = shortCutoffDistanceKm * degreesPerKm;
+const shortCutoffDistanceSceneScale = shortCutoffDistanceDegrees * scaleX; // Apply the same scaling used for latitude/longitude to scene conversion
+const highCutoffDistanceDegrees = highCutoffDistanceKm * degreesPerKm;
+const highCutoffDistanceSceneScale = highCutoffDistanceDegrees * scaleX; // Apply the same scaling used for latitude/longitude to scene conversion
+
 // Function to convert lat/long to scene coordinates with an offset
 function latLongToScene(lat, long, offsetX, offsetZ) {
     const x = (long - centerLong) * scaleX - offsetX;
@@ -104,7 +114,7 @@ function createArchPath(startX, startZ, endX, endZ) {
 }
 
 // Function to create an arrow with a 3D arching effect
-function createArrow(startX, startZ, endX, endZ, color = 0x0000ff) {
+function createArrow(startX, startZ, endX, endZ, color = 0x3CB371) {
     const path = createArchPath(startX, startZ, endX, endZ);
     const geometry = new THREE.TubeGeometry(path, 20, 0.05, 8, false);
     const material = new THREE.MeshBasicMaterial({ color });
@@ -114,7 +124,7 @@ function createArrow(startX, startZ, endX, endZ, color = 0x0000ff) {
 }
 
 // Function to create a straight line
-function createStraightLine(startX, startZ, endX, endZ, color = 0x00ff00) {
+function createStraightLine(startX, startZ, endX, endZ, color =0xFF7F50) {
     const material = new THREE.LineBasicMaterial({ color });
     const points = [];
     points.push(new THREE.Vector3(startX, 0, startZ));
@@ -125,37 +135,51 @@ function createStraightLine(startX, startZ, endX, endZ, color = 0x00ff00) {
     return line;
 }
 
+function createHighArchArrow(startX, startZ, endX, endZ, color = 0x4682B4) {
+    const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endZ - startZ, 2));
+
+    // Reduced arch height for the high arch arrow
+    const archHeight = Math.min(Math.pow(distance, 1.8) * 0.03, 40); // Adjust this for the desired effect
+
+    const curve = new THREE.QuadraticBezierCurve3(
+        new THREE.Vector3(startX, 0, startZ),
+        new THREE.Vector3((startX + endX) / 2, archHeight, (startZ + endZ) / 2),
+        new THREE.Vector3(endX, 0, endZ)
+    );
+
+    const geometry = new THREE.TubeGeometry(curve, 20, 0.05, 8, false);
+    const material = new THREE.MeshBasicMaterial({ color });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.material.transparent = true;
+    return mesh;
+}
+
 // Function to animate a point and an arrow using lat/long
 function animatePointAndArrow(startLat, startLong, endLat, endLong) {
     const startCoords = latLongToScene(startLat, startLong, centerOffset.x, centerOffset.z);
     const endCoords = latLongToScene(endLat, endLong, centerOffset.x, centerOffset.z);
 
-    console.log(`Start coordinates: ${startCoords.x}, ${startCoords.z}`);
-    console.log(`End coordinates: ${endCoords.x}, ${endCoords.z}`);
-
     const startPoint = createPoint(startCoords.x, startCoords.z);
     const endPoint = createPoint(endCoords.x, endCoords.z);
     
-    // Calculate distance
     const distance = Math.sqrt(Math.pow(endCoords.x - startCoords.x, 2) + Math.pow(endCoords.z - startCoords.z, 2));
-    console.log(`Distance: ${distance}`);
-
+    
     let arrow;
-    if (distance < 15) { //adjust to be lower to create less lines and more archs
-        console.log("Creating a straight line arrow");
+    if (distance < shortCutoffDistanceSceneScale) {
+        console.log(`Creating a straight line for short distance: ${distance}`);
         arrow = createStraightLine(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
-    } else {
-        console.log("Creating an arching arrow");
+    } else if (distance < highCutoffDistanceSceneScale) {
+        console.log(`Creating a medium arch for medium distance: ${distance}`);
         arrow = createArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
+    } else {
+        console.log(`Creating a high arch for long distance: ${distance}`);
+        arrow = createHighArchArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
     }
 
     scene.add(startPoint);
     scene.add(endPoint);
     scene.add(arrow);
 
-    console.log(`Added points and arrow: start (${startLat}, ${startLong}), end (${endLat}, ${endLong})`);
-
-    // Fade out after 5 seconds
     setTimeout(() => {
         fadeOutObject(startPoint);
         fadeOutObject(endPoint);
