@@ -13,19 +13,19 @@ renderer.setClearColor(0x000000); // Initial background color (black for night)
 document.getElementById('animationBox').appendChild(renderer.domElement);
 
 // Global variable to toggle camera mode
-var isFixedCamera = false; // Set to true for fixed camera, false for free cam
+var isFixedCamera = true; // Set to true for fixed camera, false for free cam
 
 // Constants for scaling
 const scaleX = 1000; // Adjust these based on your scene
 const scaleZ = 1000;
 
 // Center coordinates (latitude and longitude)
-const centerLat = 30.268485;
-const centerLong = -97.74091;
+const centerLat = 30.267487662162164;
+const centerLong = -97.74193387837838;
 
 // Define cutoff distances
-const shortCutoffDistanceKm = 1.481499875685591; // Short distance cutoff in kilometers
-const highCutoffDistanceKm = 2.6459084063331675; // High distance cutoff in kilometers
+const shortCutoffDistanceKm = 0.9069817439015526; // Short distance cutoff in kilometers
+const highCutoffDistanceKm = 3.61510003190158; // High distance cutoff in kilometers
 
 const degreesPerKm = 1 / 111; // Roughly 111 km per degree of latitude
 const shortCutoffDistanceDegrees = shortCutoffDistanceKm * degreesPerKm;
@@ -65,15 +65,17 @@ scene.add(directionalLight);
 let angle = 0;
 
 // Helpers
-const gridHelper = new THREE.GridHelper(10, 10);
-scene.add(gridHelper);
+// const gridHelper = new THREE.GridHelper(10, 10);
+// scene.add(gridHelper);
 
-const axesHelper = new THREE.AxesHelper(5);
-scene.add(axesHelper);
+// const axesHelper = new THREE.AxesHelper(5);
+// scene.add(axesHelper);
 
 // Function to handle the fade out animation
 function fadeOutObject(object, callback) {
-    let opacity = 1, step = 0.01;
+    let opacity = 1;
+    const step = 0.03; // Increase this value for faster fading
+
     const fade = () => {
         if (opacity <= 0) {
             scene.remove(object);
@@ -113,8 +115,20 @@ function createArchPath(startX, startZ, endX, endZ) {
     return curve;
 }
 
+// Function to create a straight line
+function createStraightLine(startX, startZ, endX, endZ, color = 0x6495ED) {
+    const path = new THREE.LineCurve3(
+        new THREE.Vector3(startX, 0, startZ),
+        new THREE.Vector3(endX, 0, endZ)
+    );
+    const geometry = new THREE.TubeGeometry(path, 20, 0.05, 8, false); // Adjust the 0.05 thickness as needed
+    const material = new THREE.MeshBasicMaterial({ color });
+    const line = new THREE.Mesh(geometry, material);
+    return line;
+}
+
 // Function to create an arrow with a 3D arching effect
-function createArrow(startX, startZ, endX, endZ, color = 0x3CB371) {
+function createArrow(startX, startZ, endX, endZ, color = 0xFFFACD) {
     const path = createArchPath(startX, startZ, endX, endZ);
     const geometry = new THREE.TubeGeometry(path, 20, 0.05, 8, false);
     const material = new THREE.MeshBasicMaterial({ color });
@@ -123,19 +137,8 @@ function createArrow(startX, startZ, endX, endZ, color = 0x3CB371) {
     return mesh;
 }
 
-// Function to create a straight line
-function createStraightLine(startX, startZ, endX, endZ, color =0xFF7F50) {
-    const material = new THREE.LineBasicMaterial({ color });
-    const points = [];
-    points.push(new THREE.Vector3(startX, 0, startZ));
-    points.push(new THREE.Vector3(endX, 0, endZ));
 
-    const geometry = new THREE.BufferGeometry().setFromPoints(points);
-    const line = new THREE.Line(geometry, material);
-    return line;
-}
-
-function createHighArchArrow(startX, startZ, endX, endZ, color = 0x4682B4) {
+function createHighArchArrow(startX, startZ, endX, endZ, color = 0xDC143C) {
     const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endZ - startZ, 2));
 
     // Reduced arch height for the high arch arrow
@@ -184,21 +187,41 @@ function animatePointAndArrow(startLat, startLong, endLat, endLong) {
         fadeOutObject(startPoint);
         fadeOutObject(endPoint);
         fadeOutObject(arrow);
-    }, 1000);
+    }, 500);
 }
 
-// Function to load kiosk paths from the JSON file and animate them
+// Function to load kiosk paths from the JSON file and animate them in batches
 function loadAndAnimateKioskPaths() {
     fetch('data/processed/kiosk_vis_paths.json')
         .then(response => response.json())
         .then(paths => {
             console.log("Loaded Kiosk Paths:", paths);
 
-            paths.forEach((path, index) => {
-                setTimeout(() => {
+            // Define the size of each batch and initialize variables
+            const batchSize = 73;
+            let batchIndex = 0;
+
+            // Function to process each batch
+            const processBatch = () => {
+                const start = batchIndex * batchSize;
+                const end = start + batchSize;
+                const batchPaths = paths.slice(start, end);
+
+                batchPaths.forEach(path => {
                     animatePointAndArrow(path.Start_Lat, path.Start_Long, path.End_Lat, path.End_Long);
-                }, index * 10); // Adjust timing as needed
-            });
+                });
+
+                batchIndex++;
+
+                // Check if there are more batches to process
+                if (batchIndex * batchSize < paths.length) {
+                    // Set timeout for the next batch
+                    setTimeout(processBatch, 1000); // Adjust the timeout as needed
+                }
+            };
+
+            // Start processing the first batch
+            processBatch();
         })
         .catch(error => {
             console.error("Error loading kiosk paths:", error);
@@ -254,8 +277,8 @@ function animate() {
 
     // Update camera for fixed camera mode
     if (isFixedCamera) {
-        angle += 0.005;
-        const radius = 15;
+        angle += 0.0025;
+        const radius = 35;
         camera.position.x = radius * Math.cos(angle);
         camera.position.z = radius * Math.sin(angle);
     }
