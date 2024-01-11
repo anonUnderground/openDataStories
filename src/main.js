@@ -13,7 +13,7 @@ renderer.setClearColor(0x000000); // Initial background color (black for night)
 document.getElementById('animationBox').appendChild(renderer.domElement);
 
 // Global variable to toggle camera mode
-var isFixedCamera = true; // Set to true for fixed camera, false for free cam
+var isFixedCamera = false; // Set to true for fixed camera, false for free cam
 
 // Constants for scaling
 const scaleX = 1000; // Adjust these based on your scene
