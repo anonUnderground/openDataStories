@@ -4,32 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Points and Arrows Animation</title>
-    <!-- Link to your CSS file with a placeholder for version -->
-    <link rel="stylesheet" href="style.css?v=2"> 
+    <link rel="stylesheet" href="style.css?v=2"> <!-- Link to CSS file -->
 </head>
 <body>
+    <div id="kioskSelector">
+        <label for="kioskSelect">Select Kiosk:</label>
+        <select id="kioskSelect" multiple>
+            <!-- Options will be dynamically populated -->
+        </select>
+    </div>
     <div id="animationBox"></div> <!-- Container for the 3D scene -->
-
-    <!-- Placeholder script tag for your JavaScript file -->
-    <script src="bundle.js?v=2"></script>
-
-    <!-- Inline script to automate cache busting -->
+    <script src="bundle.js?v=2"></script> <!-- JavaScript file -->
     <script>
-        // Function to update the version placeholders
+        // Cache busting for CSS and JS files
         function updateAssetPaths() {
-            // Use current timestamp as version
             var version = new Date().getTime();
-
-            // Update the href of the stylesheet
-            var stylesheet = document.querySelector('link[href*="style.css"]');
-            stylesheet.href = stylesheet.href.replace('version_placeholder', version);
-
-            // Update the src of the script
-            var script = document.querySelector('script[src*="bundle.js"]');
-            script.src = script.src.replace('version_placeholder', version);
+            document.querySelector('link[href*="style.css"]').href = 'style.css?v=' + version;
+            document.querySelector('script[src*="bundle.js"]').src = 'bundle.js?v=' + version;
         }
-
-        // Run the function on load
         updateAssetPaths();
     </script>
 </body>

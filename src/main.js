@@ -4,290 +4,170 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls';
 
-// Initial setup of scene, camera, and renderer
-var scene = new THREE.Scene();
-var camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-var renderer = new THREE.WebGLRenderer();
-renderer.setSize(document.getElementById('animationBox').clientWidth, document.getElementById('animationBox').clientHeight);
-renderer.setClearColor(0x000000); // Initial background color (black for night)
-document.getElementById('animationBox').appendChild(renderer.domElement);
-
-// Global variable to toggle camera mode
-var isFixedCamera = false; // Set to true for fixed camera, false for free cam
-
-// Constants for scaling
-const scaleX = 1000; // Adjust these based on your scene
-const scaleZ = 1000;
-
-// Center coordinates (latitude and longitude)
-const centerLat = 30.267487662162164;
-const centerLong = -97.74193387837838;
-
-// Define cutoff distances
-const shortCutoffDistanceKm = 0.9069817439015526; // Short distance cutoff in kilometers
-const highCutoffDistanceKm = 3.61510003190158; // High distance cutoff in kilometers
-
-const degreesPerKm = 1 / 111; // Roughly 111 km per degree of latitude
+var scene, camera, renderer, controls;
+var isFixedCamera = false; // True for fixed camera, false for orbit controls
+const scaleX = 1000, scaleZ = 1000;
+const centerLat = 30.267487662162164, centerLong = -97.74193387837838;
+const shortCutoffDistanceKm = 0.9069817439015526, highCutoffDistanceKm = 3.61510003190158;
+const degreesPerKm = 1 / 111;
 const shortCutoffDistanceDegrees = shortCutoffDistanceKm * degreesPerKm;
-const shortCutoffDistanceSceneScale = shortCutoffDistanceDegrees * scaleX; // Apply the same scaling used for latitude/longitude to scene conversion
+const shortCutoffDistanceSceneScale = shortCutoffDistanceDegrees * scaleX;
 const highCutoffDistanceDegrees = highCutoffDistanceKm * degreesPerKm;
-const highCutoffDistanceSceneScale = highCutoffDistanceDegrees * scaleX; // Apply the same scaling used for latitude/longitude to scene conversion
+const highCutoffDistanceSceneScale = highCutoffDistanceDegrees * scaleX;
+let kioskPathsData = [], kioskCoordinatesMap = {}, particlesMap = new Map(), angle = 0;
 
-// Function to convert lat/long to scene coordinates with an offset
+// Initialize the scene
+function init() {
+    scene = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x000000); // Set initial background color to black
+    document.getElementById('animationBox').appendChild(renderer.domElement);
+
+    camera.position.set(30, 30, 30);
+    camera.lookAt(0, 0, 0);
+
+    controls = new OrbitControls(camera, renderer.domElement);
+    controls.target.set(0, 0, 0);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+    addLighting();
+    loadData();
+    animate();
+}
+
+function addLighting() {
+    const ambientLight = new THREE.AmbientLight(0x404040);
+    scene.add(ambientLight);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    directionalLight.position.set(1, 1, 1);
+    scene.add(directionalLight);
+}
+
+function loadData() {
+    Promise.all([
+        fetch('data/processed/kiosk_vis_paths.json').then(response => response.json()),
+        fetch('data/processed/trips_between_kiosks.json').then(response => response.json())
+    ]).then(([kioskData, tripData]) => {
+        kioskPathsData = kioskData;
+        mapKioskCoordinates(kioskPathsData);
+        populateKioskSelector();
+        createParticlesForPaths(kioskPathsData, tripData);
+    }).catch(error => console.error("Error loading data:", error));
+}
+
+function populateKioskSelector() {
+    const selector = document.getElementById('kioskSelect');
+    kioskPathsData.forEach(path => {
+        const optionStart = document.createElement('option');
+        optionStart.value = path.Start_Kiosk_ID;
+        optionStart.textContent = `Start Kiosk ${path.Start_Kiosk_ID}`;
+        selector.appendChild(optionStart);
+
+        const optionEnd = document.createElement('option');
+        optionEnd.value = path.End_Kiosk_ID;
+        optionEnd.textContent = `End Kiosk ${path.End_Kiosk_ID}`;
+        selector.appendChild(optionEnd);
+    });
+}
+
+// Event listener for selection changes
+document.getElementById('kioskSelect').addEventListener('change', (event) => {
+    const selectedKiosks = Array.from(event.target.selectedOptions).map(option => option.value);
+    updateSelectedPaths(selectedKiosks);
+});
+
+function updateSelectedPaths(selectedKiosks) {
+    // Logic to update particle animations based on selected kiosks
+    // This function needs to be implemented according to your application's logic
+}
+
 function latLongToScene(lat, long, offsetX, offsetZ) {
     const x = (long - centerLong) * scaleX - offsetX;
     const z = (lat - centerLat) * scaleZ - offsetZ;
     return { x, z };
 }
 
-// Calculate the offset based on the center coordinates
 const centerOffset = latLongToScene(centerLat, centerLong, 0, 0);
 
-// Set the camera position
-camera.position.set(30, 30, 30);
-camera.lookAt(0, 0, 0); // Look at the origin
-
-// Setup OrbitControls
-const controls = new OrbitControls(camera, renderer.domElement);
-controls.target.set(0, 0, 0); // Set the target to the origin
-controls.enableDamping = true;
-controls.dampingFactor = 0.05;
-
-// Adding Lighting
-const ambientLight = new THREE.AmbientLight(0x404040); // soft white light
-scene.add(ambientLight);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
-directionalLight.position.set(1, 1, 1);
-scene.add(directionalLight);
-
-// Define a variable for the rotation angle
-let angle = 0;
-
-// Helpers
-// const gridHelper = new THREE.GridHelper(10, 10);
-// scene.add(gridHelper);
-
-// const axesHelper = new THREE.AxesHelper(5);
-// scene.add(axesHelper);
-
-// Function to handle the fade out animation
-function fadeOutObject(object, callback) {
-    let opacity = 1;
-    const step = 0.03; // Increase this value for faster fading
-
-    const fade = () => {
-        if (opacity <= 0) {
-            scene.remove(object);
-            if (callback) callback();
-        } else {
-            requestAnimationFrame(fade);
-            object.material.opacity = opacity;
-            opacity -= step;
-        }
-    };
-    fade();
-}
-
-// Function to create a point on the X-Z plane
-function createPoint(x, z, color = 0xff0000) {
-    const geometry = new THREE.SphereGeometry(0.2, 32, 32);
-    const material = new THREE.MeshBasicMaterial({ color });
-    const sphere = new THREE.Mesh(geometry, material);
-    sphere.position.set(x, 0, z);
-    return sphere;
-}
-
-// Function to create a curved path for the arrow with arch height based on distance
-function createArchPath(startX, startZ, endX, endZ) {
-    // Calculate the distance between the start and end points
-    const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endZ - startZ, 2));
-    
-    // Use an exponential function to calculate the arch height
-    // Adjust the exponent and coefficient as needed for desired effect
-    const archHeight = Math.min(Math.pow(distance, 1.5) * 0.1, 30); // Limits the height to a maximum value
-
-    const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(startX, 0, startZ),
-        new THREE.Vector3((startX + endX) / 2, archHeight, (startZ + endZ) / 2), // Control point with dynamic Y value
-        new THREE.Vector3(endX, 0, endZ)
-    );
-    return curve;
-}
-
-// Function to create a straight line
-function createStraightLine(startX, startZ, endX, endZ, color = 0x6495ED) {
-    const path = new THREE.LineCurve3(
-        new THREE.Vector3(startX, 0, startZ),
-        new THREE.Vector3(endX, 0, endZ)
-    );
-    const geometry = new THREE.TubeGeometry(path, 20, 0.05, 8, false); // Adjust the 0.05 thickness as needed
-    const material = new THREE.MeshBasicMaterial({ color });
-    const line = new THREE.Mesh(geometry, material);
-    return line;
-}
-
-// Function to create an arrow with a 3D arching effect
-function createArrow(startX, startZ, endX, endZ, color = 0xFFFACD) {
-    const path = createArchPath(startX, startZ, endX, endZ);
-    const geometry = new THREE.TubeGeometry(path, 20, 0.05, 8, false);
-    const material = new THREE.MeshBasicMaterial({ color });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.material.transparent = true;
-    return mesh;
-}
-
-
-function createHighArchArrow(startX, startZ, endX, endZ, color = 0xDC143C) {
-    const distance = Math.sqrt(Math.pow(endX - startX, 2) + Math.pow(endZ - startZ, 2));
-
-    // Reduced arch height for the high arch arrow
-    const archHeight = Math.min(Math.pow(distance, 1.8) * 0.03, 40); // Adjust this for the desired effect
-
-    const curve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(startX, 0, startZ),
-        new THREE.Vector3((startX + endX) / 2, archHeight, (startZ + endZ) / 2),
-        new THREE.Vector3(endX, 0, endZ)
-    );
-
-    const geometry = new THREE.TubeGeometry(curve, 20, 0.05, 8, false);
-    const material = new THREE.MeshBasicMaterial({ color });
-    const mesh = new THREE.Mesh(geometry, material);
-    mesh.material.transparent = true;
-    return mesh;
-}
-
-// Function to animate a point and an arrow using lat/long
 function animatePointAndArrow(startLat, startLong, endLat, endLong) {
     const startCoords = latLongToScene(startLat, startLong, centerOffset.x, centerOffset.z);
     const endCoords = latLongToScene(endLat, endLong, centerOffset.x, centerOffset.z);
-
-    const startPoint = createPoint(startCoords.x, startCoords.z);
-    const endPoint = createPoint(endCoords.x, endCoords.z);
-    
     const distance = Math.sqrt(Math.pow(endCoords.x - startCoords.x, 2) + Math.pow(endCoords.z - startCoords.z, 2));
+    return distance < shortCutoffDistanceSceneScale ?
+        new THREE.LineCurve3(new THREE.Vector3(startCoords.x, 0, startCoords.z), new THREE.Vector3(endCoords.x, 0, endCoords.z)) :
+        new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(startCoords.x, 0, startCoords.z),
+            new THREE.Vector3((startCoords.x + endCoords.x) / 2, Math.min(Math.pow(distance, 1.5) * 0.1, 30), (startCoords.z + endCoords.z) / 2),
+            new THREE.Vector3(endCoords.x, 0, endCoords.z)
+        );
+}
+
+function mapKioskCoordinates(kioskPathsData) {
+    kioskPathsData.forEach(path => {
+        kioskCoordinatesMap[path.Start_Kiosk_ID] = { lat: path.Start_Lat, long: path.Start_Long };
+        kioskCoordinatesMap[path.End_Kiosk_ID] = { lat: path.End_Lat, long: path.End_Long };
+    });
+}
+
+function createParticlesForPaths(kioskPathsData, tripData) {
+    kioskPathsData.forEach(path => {
+        const count = findTripCount(path.Start_Kiosk_ID, path.End_Kiosk_ID, tripData);
+        if (count > 0) {
+            createParticles(path, count);
+        }
+    });
+}
+
+function findTripCount(startKioskID, endKioskID, tripData) {
+    const trip = tripData.find(trip => trip['Checkout Kiosk ID'] === startKioskID && trip['Return Kiosk ID'] === endKioskID);
+    return trip ? trip.Count : 0;
+}
+
+function createParticles(path, count) {
+    const startCoords = kioskCoordinatesMap[path.Start_Kiosk_ID];
+    const endCoords = kioskCoordinatesMap[path.End_Kiosk_ID];
+    const curve = animatePointAndArrow(startCoords.lat, startCoords.long, endCoords.lat, endCoords.long);
     
-    let arrow;
-    if (distance < shortCutoffDistanceSceneScale) {
-        console.log(`Creating a straight line for short distance: ${distance}`);
-        arrow = createStraightLine(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
-    } else if (distance < highCutoffDistanceSceneScale) {
-        console.log(`Creating a medium arch for medium distance: ${distance}`);
-        arrow = createArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
-    } else {
-        console.log(`Creating a high arch for long distance: ${distance}`);
-        arrow = createHighArchArrow(startCoords.x, startCoords.z, endCoords.x, endCoords.z);
+    // Scaling factor for particle count, e.g., 1 particle per 10 trips
+    const scaleFactor = 100; 
+    const maxParticles = 100; // Maximum number of particles
+    const numParticles = Math.min(Math.ceil(count / scaleFactor), maxParticles);
+
+    for (let i = 0; i < numParticles; i++) {
+        const pointsGeometry = new THREE.BufferGeometry();
+        const positions = new Float32Array(3); // Single point initially
+        pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+        const particlesMaterial = new THREE.PointsMaterial({ size: 0.05, color: 0xffffff });
+        const particle = new THREE.Points(pointsGeometry, particlesMaterial);
+        scene.add(particle);
+
+        // Random radius offset for each particle
+        const radiusOffset = Math.random() * 0.5;
+        particlesMap.set(particle, { curve: curve, t: i / numParticles, radiusOffset: radiusOffset });
     }
-
-    scene.add(startPoint);
-    scene.add(endPoint);
-    scene.add(arrow);
-
-    setTimeout(() => {
-        fadeOutObject(startPoint);
-        fadeOutObject(endPoint);
-        fadeOutObject(arrow);
-    }, 500);
 }
 
-// Function to load kiosk paths from the JSON file and animate them in batches
-function loadAndAnimateKioskPaths() {
-    fetch('data/processed/kiosk_vis_paths.json')
-        .then(response => response.json())
-        .then(paths => {
-            console.log("Loaded Kiosk Paths:", paths);
-
-            // Define the size of each batch and initialize variables
-            const batchSize = 73;
-            let batchIndex = 0;
-
-            // Function to process each batch
-            const processBatch = () => {
-                const start = batchIndex * batchSize;
-                const end = start + batchSize;
-                const batchPaths = paths.slice(start, end);
-
-                batchPaths.forEach(path => {
-                    animatePointAndArrow(path.Start_Lat, path.Start_Long, path.End_Lat, path.End_Long);
-                });
-
-                batchIndex++;
-
-                // Check if there are more batches to process
-                if (batchIndex * batchSize < paths.length) {
-                    // Set timeout for the next batch
-                    setTimeout(processBatch, 1000); // Adjust the timeout as needed
-                }
-            };
-
-            // Start processing the first batch
-            processBatch();
-        })
-        .catch(error => {
-            console.error("Error loading kiosk paths:", error);
-        });
-}
-
-// Function to create and add a kiosk object to the scene
-function addKiosk(lat, long, color = 0x00ff00) {
-    lat = parseFloat(lat);
-    long = parseFloat(long);
-    const { x, z } = latLongToScene(lat, long, centerOffset.x, centerOffset.z);
-
-    // Define the geometry for the kiosk
-    const geometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-    const material = new THREE.MeshLambertMaterial({ color });
-    const kiosk = new THREE.Mesh(geometry, material);
-
-    // Set the position of the kiosk with the offset
-    kiosk.position.set(x, 0, z);
-
-    // Add the kiosk to the scene
-    scene.add(kiosk);
-}
-
-// Function to load kiosk points from a JSON file and add them to the scene
-function loadAndAddKiosks() {
-    fetch('data/processed/kiosk_coords.json')
-        .then(response => response.json())
-        .then(kiosks => {
-            console.log("Loaded Kiosks:", kiosks);
-
-            kiosks.forEach(kiosk => {
-                // Convert latitude and longitude to x and z coordinates
-                addKiosk(kiosk.latitude, kiosk.longitude);
-            });
-        })
-        .catch(error => {
-            console.error("Error loading kiosks:", error);
-        });
-}
-
-// Call the loadAndAddKiosks function to add kiosks to the scene
-loadAndAddKiosks();
-
-// Starting the animation sequence with a 5-second delay
-setTimeout(() => {
-    loadAndAnimateKioskPaths();
-}, 5000);
-
-// Updated animation loop with day/night cycle
 function animate() {
     requestAnimationFrame(animate);
-
-    // Update camera for fixed camera mode
-    if (isFixedCamera) {
-        angle += 0.0025;
-        const radius = 35;
-        camera.position.x = radius * Math.cos(angle);
-        camera.position.z = radius * Math.sin(angle);
-    }
-
-    camera.lookAt(0, 0, 0); // Keep camera focused on center
-
-    controls.update(); // Update controls
-
+    particlesMap.forEach((data, particle) => {
+        data.t = (data.t + 0.1) % 1;
+        const pointOnCurve = data.curve.getPoint(data.t);
+        
+        // Displace particle position with the random radius offset
+        const angle = Math.random() * Math.PI * 2; // Random angle for displacement
+        particle.geometry.attributes.position.setXYZ(
+            0, 
+            pointOnCurve.x + data.radiusOffset * Math.cos(angle), 
+            pointOnCurve.y, 
+            pointOnCurve.z + data.radiusOffset * Math.sin(angle)
+        );
+        particle.geometry.attributes.position.needsUpdate = true;
+    });
+    controls.update();
     renderer.render(scene, camera);
 }
 
-animate();
+document.addEventListener('DOMContentLoaded', init);

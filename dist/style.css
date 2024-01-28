@@ -1,21 +1,34 @@
-/* Set the background color of the entire page */
+/* Style for the entire page */
 body {
     margin: 0;
     padding: 0;
-    background-color: #000000; /* Black background for the whole page */
+    background-color: #000000; /* Black background */
+    font-family: Arial, sans-serif;
+    overflow: hidden; /* Prevents scrollbars if the content is larger than the viewport */
 }
 
 /* Style for the 3D animation container */
 #animationBox {
-    width: 80%; /* Increase width to 80% */
-    height: 80vh; /* Increase height to 80% of the viewport height */
+    width: 100%; /* Use full width */
+    height: 100vh; /* Use full viewport height */
     background-color: #000000; /* Black background for the box */
-    margin: auto; /* Center the box horizontally */
-    display: flex;
-    justify-content: center;
-    align-items: center;
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    top: 0;
+    left: 0;
+}
+
+/* Style for the kiosk selector UI */
+#kioskSelector {
+    position: absolute;
+    top: 10px; /* Adjust as needed */
+    left: 10px; /* Adjust as needed */
+    background: rgba(255, 255, 255, 0.8);
+    padding: 10px;
+    border-radius: 5px;
+    z-index: 10; /* Higher z-index to ensure it's above the animation box */
+}
+
+#kioskSelect {
+    padding: 5px;
+    margin-top: 5px;
 }
