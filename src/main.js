@@ -46,16 +46,23 @@ function addLighting() {
     scene.add(directionalLight);
 }
 
-function loadData() {
-    Promise.all([
-        fetch('data/processed/kiosk_vis_paths.json').then(response => response.json()),
-        fetch('data/processed/trips_between_kiosks.json').then(response => response.json())
-    ]).then(([kioskData, tripData]) => {
+async function loadData() {
+    try {
+        const [kioskResponse, tripResponse] = await Promise.all([
+            fetch('data/processed/kiosk_vis_paths.json'),
+            fetch('data/processed/trips_between_kiosks.json')
+        ]);
+
+        const kioskData = await kioskResponse.json();
+        const tripData = await tripResponse.json();
+
         kioskPathsData = kioskData;
         mapKioskCoordinates(kioskPathsData);
         populateKioskSelector();
         createParticlesForPaths(kioskPathsData, tripData);
-    }).catch(error => console.error("Error loading data:", error));
+    } catch (error) {
+        console.error("Error loading data:", error);
+    }
 }
 
 function populateKioskSelector() {
