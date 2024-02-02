@@ -59,7 +59,12 @@ async function loadData() {
         kioskPathsData = kioskData;
         mapKioskCoordinates(kioskPathsData);
         populateKioskSelector();
-        createParticlesForPaths(kioskPathsData, tripData);
+
+        // Calculate MaxTraffic
+        const maxTraffic = tripData.reduce((max, trip) => Math.max(max, trip.Count), 0);
+
+        // Pass maxTraffic to createParticlesForPaths
+        createParticlesForPaths(kioskPathsData, tripData, maxTraffic);
     } catch (error) {
         console.error("Error loading data:", error);
     }
@@ -119,11 +124,15 @@ function mapKioskCoordinates(kioskPathsData) {
     });
 }
 
-function createParticlesForPaths(kioskPathsData, tripData) {
+function createParticlesForPaths(kioskPathsData, tripData, maxTraffic) {
+    // Define the minimum trip count threshold
+    const minTripCount = 100; // Example threshold, adjust as needed
+
     kioskPathsData.forEach(path => {
         const count = findTripCount(path.Start_Kiosk_ID, path.End_Kiosk_ID, tripData);
-        if (count > 0) {
-            createParticles(path, count);
+        // Only create particles if the trip count meets or exceeds the threshold
+        if (count >= minTripCount) {
+            createParticles(path, count, maxTraffic);
         }
     });
 }
@@ -133,25 +142,50 @@ function findTripCount(startKioskID, endKioskID, tripData) {
     return trip ? trip.Count : 0;
 }
 
-function createParticles(path, count) {
+function interpolateColor(trafficCount, maxTraffic) {
+    // Apply a logarithmic transformation to both the trafficCount and maxTraffic
+    // Adding 1 before taking the log to avoid log(0) which is undefined
+    const logTrafficCount = Math.log(trafficCount + 1);
+    const logMaxTraffic = Math.log(maxTraffic + 1);
+
+    // Normalize the log-transformed traffic count to a 0-1 range
+    const normalizedLogTraffic = Math.min(Math.max(logTrafficCount / logMaxTraffic, 0), 1);
+
+    // Define color stops
+    const green = new THREE.Color(0x00ff00);
+    const yellow = new THREE.Color(0xffff00);
+    const red = new THREE.Color(0xff0000);
+
+    let color = new THREE.Color();
+    if (normalizedLogTraffic <= 0.5) {
+        // Interpolate between green and yellow for the first half
+        color.lerpColors(green, yellow, normalizedLogTraffic * 2);
+    } else {
+        // Interpolate between yellow and red for the second half
+        color.lerpColors(yellow, red, (normalizedLogTraffic - 0.5) * 2);
+    }
+
+    return color;
+}
+
+function createParticles(path, count, maxTraffic) {
     const startCoords = kioskCoordinatesMap[path.Start_Kiosk_ID];
     const endCoords = kioskCoordinatesMap[path.End_Kiosk_ID];
     const curve = animatePointAndArrow(startCoords.lat, startCoords.long, endCoords.lat, endCoords.long);
     
-    // Scaling factor for particle count, e.g., 1 particle per 10 trips
     const scaleFactor = 100; 
     const maxParticles = 100; // Maximum number of particles
     const numParticles = Math.min(Math.ceil(count / scaleFactor), maxParticles);
+    const particleColor = interpolateColor(count, maxTraffic);
 
     for (let i = 0; i < numParticles; i++) {
         const pointsGeometry = new THREE.BufferGeometry();
         const positions = new Float32Array(3); // Single point initially
         pointsGeometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-        const particlesMaterial = new THREE.PointsMaterial({ size: 0.05, color: 0xffffff });
+        const particlesMaterial = new THREE.PointsMaterial({ size: 0.05, color: particleColor.getHex() });
         const particle = new THREE.Points(pointsGeometry, particlesMaterial);
         scene.add(particle);
 
-        // Random radius offset for each particle
         const radiusOffset = Math.random() * 0.5;
         particlesMap.set(particle, { curve: curve, t: i / numParticles, radiusOffset: radiusOffset });
     }
