@@ -34,8 +34,27 @@ function init() {
     controls.dampingFactor = 0.05;
 
     addLighting();
-    loadData();
+    loadData().then(setupThresholdAdjustment);;
     animate();
+}
+
+function setupThresholdAdjustment() {
+    document.getElementById('minTripCount').addEventListener('input', function() {
+        // This block is executed when the input value changes
+        const newMinTripCount = parseInt(document.getElementById('minTripCount').value, 10);
+
+        // Clear the scene and redraw
+        clearScene();
+        createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic, newMinTripCount);
+    });
+}
+
+function clearScene() {
+    // Example function to clear particles
+    particlesMap.forEach((value, particle) => {
+        scene.remove(particle);
+    });
+    particlesMap.clear();
 }
 
 function addLighting() {
@@ -124,9 +143,9 @@ function mapKioskCoordinates(kioskPathsData) {
     });
 }
 
-function createParticlesForPaths(kioskPathsData, tripData, maxTraffic) {
-    // Define the minimum trip count threshold
-    const minTripCount = 100; // Example threshold, adjust as needed
+function createParticlesForPaths(kioskPathsData, tripData, maxTraffic, minTripCount = 100) {
+    // Remove the conflicting declaration
+    // const minTripCount = document.getElementById('minTripCount').value; // This line is removed
 
     kioskPathsData.forEach(path => {
         const count = findTripCount(path.Start_Kiosk_ID, path.End_Kiosk_ID, tripData);
@@ -211,4 +230,6 @@ function animate() {
     renderer.render(scene, camera);
 }
 
-document.addEventListener('DOMContentLoaded', init);
+document.addEventListener('DOMContentLoaded', function() {
+    init(); // Initialize your scene and data here
+});

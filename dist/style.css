@@ -15,20 +15,29 @@ body {
     position: absolute;
     top: 0;
     left: 0;
+    z-index: 1; /* Ensure it's below the UI container */
 }
 
-/* Style for the kiosk selector UI */
-#kioskSelector {
+/* Style for UI container */
+#uiContainer {
     position: absolute;
-    top: 10px; /* Adjust as needed */
-    left: 10px; /* Adjust as needed */
+    top: 10px;
+    left: 10px;
+    z-index: 2; /* Ensure it's above the animation box */
+}
+
+#kioskSelector {
     background: rgba(255, 255, 255, 0.8);
     padding: 10px;
     border-radius: 5px;
-    z-index: 10; /* Higher z-index to ensure it's above the animation box */
 }
 
-#kioskSelect {
-    padding: 5px;
+#kioskSelect, #minTripCount {
+    display: block; /* Ensures the inputs appear on new lines */
     margin-top: 5px;
+    width: auto; /* Allows for automatic adjustment based on content */
+}
+
+label {
+    color: white; /* Ensures labels are visible against the background */
 }

@@ -4,25 +4,21 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Points and Arrows Animation</title>
-    <link rel="stylesheet" href="style.css?v=2"> <!-- Link to CSS file -->
+    <link rel="stylesheet" href="style.css"> <!-- Removed cache-busting for simplicity -->
 </head>
 <body>
-    <div id="kioskSelector">
-        <label for="kioskSelect">Select Kiosk:</label>
-        <select id="kioskSelect" multiple>
-            <!-- Options will be dynamically populated -->
-        </select>
+    <div id="uiContainer">
+        <div id="kioskSelector">
+            <label for="kioskSelect">Select Kiosk:</label>
+            <select id="kioskSelect" multiple>
+                <!-- Options will be dynamically populated -->
+            </select>
+            <br/> <!-- Added line break for better spacing -->
+            <label for="minTripCount">Minimum Trip Count:</label>
+            <input type="number" id="minTripCount" value="100">
+        </div>
     </div>
     <div id="animationBox"></div> <!-- Container for the 3D scene -->
-    <script src="bundle.js?v=2"></script> <!-- JavaScript file -->
-    <script>
-        // Cache busting for CSS and JS files
-        function updateAssetPaths() {
-            var version = new Date().getTime();
-            document.querySelector('link[href*="style.css"]').href = 'style.css?v=' + version;
-            document.querySelector('script[src*="bundle.js"]').src = 'bundle.js?v=' + version;
-        }
-        updateAssetPaths();
-    </script>
+    <script src="bundle.js"></script> <!-- Assuming bundle.js contains all necessary JS -->
 </body>
 </html>
