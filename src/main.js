@@ -15,15 +15,57 @@ const shortCutoffDistanceSceneScale = shortCutoffDistanceDegrees * scaleX;
 const highCutoffDistanceDegrees = highCutoffDistanceKm * degreesPerKm;
 const highCutoffDistanceSceneScale = highCutoffDistanceDegrees * scaleX;
 let kioskPathsData = [], kioskCoordinatesMap = {}, particlesMap = new Map(), angle = 0;
+let globalMaxParticles = 250; // Default value matching the slider
+let tripData = []; // Holds data about trips between kiosks
+let maxTraffic = 0; // Holds the maximum traffic value calculated from tripData
+let globalMaxTraffic = 0; // Initial value, adjust as necessary based on your data/logic
+let globalMinTripCount = 200;
 
-// Initialize the scene
+function safeInit() {
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+        // Directly call init if the DOM is already loaded
+        init();
+    } else {
+        // Otherwise, wait for the DOMContentLoaded event
+        document.addEventListener('DOMContentLoaded', init);
+    }
+}
+
+safeInit();
+
 function init() {
+    console.log("Init started");
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
     renderer = new THREE.WebGLRenderer();
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setClearColor(0x000000); // Set initial background color to black
-    document.getElementById('animationBox').appendChild(renderer.domElement);
+    const animationBox = document.getElementById('animationBox');
+    if (animationBox) {
+        animationBox.appendChild(renderer.domElement);
+    } else {
+        console.error('The animation box was not found.');
+        return;
+    }
+
+    // Now it's safe to add event listeners directly, assuming init is called after DOMContentLoaded
+    const maxParticlesElement = document.getElementById('maxParticles');
+    if (maxParticlesElement) {
+        maxParticlesElement.addEventListener('input', function() {
+            if (!tripData || tripData.length === 0) {
+                console.error("tripData is not yet loaded.");
+                return;
+            }
+            globalMaxParticles = parseInt(this.value, 10);
+            console.log("Max particles set to:", globalMaxParticles);
+
+            // Clear the scene and redraw with updated maxParticles value
+            clearScene();
+            createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic, globalMinTripCount);
+        });
+    } else {
+        console.error('Element with ID "maxParticles" was not found.');
+    }
 
     camera.position.set(30, 30, 30);
     camera.lookAt(0, 0, 0);
@@ -34,19 +76,14 @@ function init() {
     controls.dampingFactor = 0.05;
 
     addLighting();
-    loadData().then(setupThresholdAdjustment);;
-    animate();
-}
-
-function setupThresholdAdjustment() {
-    document.getElementById('minTripCount').addEventListener('input', function() {
-        // This block is executed when the input value changes
-        const newMinTripCount = parseInt(document.getElementById('minTripCount').value, 10);
-
-        // Clear the scene and redraw
-        clearScene();
-        createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic, newMinTripCount);
+    // loadData function call moved here with promise handling for better flow control
+    loadData().then(() => {
+        console.log("Data successfully loaded");
+        // You can call any setup functions that depend on loaded data here
+    }).catch(error => {
+        console.error("Error loading data:", error);
     });
+    animate();
 }
 
 function clearScene() {
@@ -73,46 +110,21 @@ async function loadData() {
         ]);
 
         const kioskData = await kioskResponse.json();
-        const tripData = await tripResponse.json();
+        tripData = await tripResponse.json(); // Now updating the global variable directly
 
         kioskPathsData = kioskData;
         mapKioskCoordinates(kioskPathsData);
-        populateKioskSelector();
 
-        // Calculate MaxTraffic
-        const maxTraffic = tripData.reduce((max, trip) => Math.max(max, trip.Count), 0);
+        // Recalculate MaxTraffic based on the newly loaded tripData
+        maxTraffic = tripData.reduce((max, trip) => Math.max(max, trip.Count), 0);
 
-        // Pass maxTraffic to createParticlesForPaths
-        createParticlesForPaths(kioskPathsData, tripData, maxTraffic);
+        globalMaxTraffic = maxTraffic;
+
+        // With tripData and maxTraffic updated, proceed to use them as needed
+        createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic);
     } catch (error) {
         console.error("Error loading data:", error);
     }
-}
-
-function populateKioskSelector() {
-    const selector = document.getElementById('kioskSelect');
-    kioskPathsData.forEach(path => {
-        const optionStart = document.createElement('option');
-        optionStart.value = path.Start_Kiosk_ID;
-        optionStart.textContent = `Start Kiosk ${path.Start_Kiosk_ID}`;
-        selector.appendChild(optionStart);
-
-        const optionEnd = document.createElement('option');
-        optionEnd.value = path.End_Kiosk_ID;
-        optionEnd.textContent = `End Kiosk ${path.End_Kiosk_ID}`;
-        selector.appendChild(optionEnd);
-    });
-}
-
-// Event listener for selection changes
-document.getElementById('kioskSelect').addEventListener('change', (event) => {
-    const selectedKiosks = Array.from(event.target.selectedOptions).map(option => option.value);
-    updateSelectedPaths(selectedKiosks);
-});
-
-function updateSelectedPaths(selectedKiosks) {
-    // Logic to update particle animations based on selected kiosks
-    // This function needs to be implemented according to your application's logic
 }
 
 function latLongToScene(lat, long, offsetX, offsetZ) {
@@ -143,7 +155,7 @@ function mapKioskCoordinates(kioskPathsData) {
     });
 }
 
-function createParticlesForPaths(kioskPathsData, tripData, maxTraffic, minTripCount = 100) {
+function createParticlesForPaths(kioskPathsData, tripData, maxTraffic, minTripCount = 200) {
     // Remove the conflicting declaration
     // const minTripCount = document.getElementById('minTripCount').value; // This line is removed
 
@@ -176,11 +188,11 @@ function interpolateColor(trafficCount, maxTraffic) {
     const red = new THREE.Color(0xff0000);
 
     let color = new THREE.Color();
-    if (normalizedLogTraffic <= 0.5) {
-        // Interpolate between green and yellow for the first half
+    if (normalizedLogTraffic >= 0.75) {
+        // Interpolate between green and yellow
         color.lerpColors(green, yellow, normalizedLogTraffic * 2);
     } else {
-        // Interpolate between yellow and red for the second half
+        // Interpolate between yellow and red
         color.lerpColors(yellow, red, (normalizedLogTraffic - 0.5) * 2);
     }
 
@@ -192,9 +204,9 @@ function createParticles(path, count, maxTraffic) {
     const endCoords = kioskCoordinatesMap[path.End_Kiosk_ID];
     const curve = animatePointAndArrow(startCoords.lat, startCoords.long, endCoords.lat, endCoords.long);
     
-    const scaleFactor = 100; 
-    const maxParticles = 100; // Maximum number of particles
-    const numParticles = Math.min(Math.ceil(count / scaleFactor), maxParticles);
+    const scaleFactor = 75; 
+    // Use globalMaxParticles instead of a hardcoded maximum
+    const numParticles = Math.min(Math.ceil(count / scaleFactor), globalMaxParticles);
     const particleColor = interpolateColor(count, maxTraffic);
 
     for (let i = 0; i < numParticles; i++) {
@@ -205,7 +217,7 @@ function createParticles(path, count, maxTraffic) {
         const particle = new THREE.Points(pointsGeometry, particlesMaterial);
         scene.add(particle);
 
-        const radiusOffset = Math.random() * 0.5;
+        const radiusOffset = Math.random() * 0.1;
         particlesMap.set(particle, { curve: curve, t: i / numParticles, radiusOffset: radiusOffset });
     }
 }
@@ -229,7 +241,3 @@ function animate() {
     controls.update();
     renderer.render(scene, camera);
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    init(); // Initialize your scene and data here
-});

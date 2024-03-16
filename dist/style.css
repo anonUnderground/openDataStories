@@ -26,18 +26,6 @@ body {
     z-index: 2; /* Ensure it's above the animation box */
 }
 
-#kioskSelector {
-    background: rgba(255, 255, 255, 0.8);
-    padding: 10px;
-    border-radius: 5px;
-}
-
-#kioskSelect, #minTripCount {
-    display: block; /* Ensures the inputs appear on new lines */
-    margin-top: 5px;
-    width: auto; /* Allows for automatic adjustment based on content */
-}
-
 label {
     color: white; /* Ensures labels are visible against the background */
 }
