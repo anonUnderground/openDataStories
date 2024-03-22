@@ -121,7 +121,7 @@ async function loadData() {
         globalMaxTraffic = maxTraffic;
 
         // With tripData and maxTraffic updated, proceed to use them as needed
-        createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic);
+        createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic, );
     } catch (error) {
         console.error("Error loading data:", error);
     }
@@ -171,7 +171,7 @@ function mapKioskCoordinates(kioskPathsData) {
     });
 }
 
-function createParticlesForPaths(kioskPathsData, tripData, maxTraffic, minTripCount = 200) {
+function createParticlesForPaths(kioskPathsData, tripData, maxTraffic, minTripCount) {
     // Remove the conflicting declaration
     // const minTripCount = document.getElementById('minTripCount').value; // This line is removed
 
@@ -189,197 +189,31 @@ function findTripCount(startKioskID, endKioskID, tripData) {
     return trip ? trip.Count : 0;
 }
 
-// function interpolateColor(trafficCount, maxTraffic) {
-//     // Apply a logarithmic transformation to both the trafficCount and maxTraffic
-//     // Adding 1 before taking the log to avoid log(0) which is undefined
-//     const logTrafficCount = Math.log(trafficCount + 1);
-//     const logMaxTraffic = Math.log(maxTraffic + 1);
-
-//     // Normalize the log-transformed traffic count to a 0-1 range
-//     const normalizedLogTraffic = Math.min(Math.max(logTrafficCount / logMaxTraffic, 0), 1);
-
-//     // Define color stops
-//     const green = new THREE.Color(0x00ff00);
-//     const yellow = new THREE.Color(0xffff00);
-//     const red = new THREE.Color(0xff0000);
-
-//     let color = new THREE.Color();
-//     if (normalizedLogTraffic >= 0.75) {
-//         // Interpolate between green and yellow
-//         color.lerpColors(green, yellow, normalizedLogTraffic * 2);
-//     } else {
-//         // Interpolate between yellow and red
-//         color.lerpColors(yellow, red, (normalizedLogTraffic - 0.5) * 2);
-//     }
-
-//     return color;
-// }
-
-// function interpolateColor(trafficCount, maxTraffic) {
-//     const logTrafficCount = Math.log(trafficCount + 1);
-//     const logMaxTraffic = Math.log(maxTraffic + 1);
-//     const normalizedLogTraffic = Math.min(Math.max(logTrafficCount / logMaxTraffic, 0), 1);
-
-//     const colors = [
-//         new THREE.Color(0x00ff00), // green
-//         new THREE.Color(0x80ff00), // light green
-//         new THREE.Color(0xbfff00), // lime
-//         new THREE.Color(0xffff00), // yellow-green
-//         new THREE.Color(0xffbf00), // yellow
-//         new THREE.Color(0xff8000), // orange
-//         new THREE.Color(0xff4000), // light red
-//         new THREE.Color(0xff0000)  // red
-//     ];
-
-//     let color = new THREE.Color();
-//     const segment = 1 / (colors.length - 1); // Divide the range [0,1] into equal segments for each color transition
-
-//     for (let i = 0; i < colors.length - 1; i++) {
-//         if (normalizedLogTraffic >= i * segment && normalizedLogTraffic < (i + 1) * segment) {
-//             const mix = (normalizedLogTraffic - i * segment) / segment; // Determine how far along the segment the value is
-//             color.lerpColors(colors[i], colors[i + 1], mix);
-//             break;
-//         }
-//     }
-
-//     // Handle the edge case where normalizedLogTraffic is exactly 1
-//     if (normalizedLogTraffic === 1) {
-//         color = colors[colors.length - 1];
-//     }
-
-//     return color;
-// }
-
-// function interpolateColor(trafficCount, maxTraffic) {
-//     // Normalize the traffic count to a 0-1 range based on maxTraffic
-//     const normalizedTraffic = Math.min(Math.max(trafficCount / maxTraffic, 0), 1);
-
-//     const colors = [
-//         new THREE.Color(0x00ff00), // green
-//         new THREE.Color(0x80ff00), // light green
-//         new THREE.Color(0xbfff00), // lime
-//         new THREE.Color(0xffff00), // yellow-green
-//         new THREE.Color(0xffbf00), // yellow
-//         new THREE.Color(0xff8000), // orange
-//         new THREE.Color(0xff4000), // light red
-//         new THREE.Color(0xff0000)  // red
-//     ];
-
-//     let color = new THREE.Color();
-//     const segment = 1 / (colors.length - 1); // Divide the range [0,1] into equal segments for each color transition
-
-//     for (let i = 0; i < colors.length - 1; i++) {
-//         if (normalizedTraffic >= i * segment && normalizedTraffic < (i + 1) * segment) {
-//             const mix = (normalizedTraffic - i * segment) / segment; // Determine how far along the segment the value is
-//             color.lerpColors(colors[i], colors[i + 1], mix);
-//             break;
-//         }
-//     }
-
-//     // Handle the edge case where normalizedTraffic is exactly 1
-//     if (normalizedTraffic === 1) {
-//         color = colors[colors.length - 1];
-//     }
-
-//     return color;
-// }
-
-// function interpolateColor(trafficCount, maxTraffic) {
-//     // Apply logarithmic scale transformation
-//     const logTraffic = Math.log(trafficCount);
-//     const logMaxTraffic = Math.log(maxTraffic); // Assuming maxTraffic is the maximum observed value, e.g., 20000
-
-//     // Normalize the log-transformed traffic count to a 0-1 range
-//     const normalizedTraffic = (logTraffic - Math.log(1)) / (logMaxTraffic - Math.log(1));
-
-//     // Define color gradient from green to red
-//     const colorEnd = new THREE.Color(0x00ff00); // Green
-//     const colorStart = new THREE.Color(0xff0000);   // Red
-
-//     let color = new THREE.Color();
-//     // Interpolate between green and red based on normalized log-transformed traffic count
-//     color.lerpColors(colorStart, colorEnd, normalizedTraffic);
-
-//     return color;
-// }
-
-// function interpolateColor(trafficCount, maxTraffic) {
-//     // Ensure trafficCount is at least 1 to avoid negative infinity in logarithm
-//     trafficCount = Math.max(1, trafficCount);
-    
-//     // Apply logarithmic scale transformation
-//     const logTraffic = Math.log(trafficCount);
-//     const logMaxTraffic = Math.log(maxTraffic);
-
-//     // Normalize the log-transformed traffic count to a 0-1 range
-//     // Since log(1) = 0, the formula simplifies to logTraffic / logMaxTraffic
-//     const normalizedTraffic = logTraffic / logMaxTraffic;
-
-//     // Define a gradient of 10 colors, transitioning from red to green
-//     const gradient = [
-//         new THREE.Color(0xff0000), // Red
-//         new THREE.Color(0xff4000),
-//         new THREE.Color(0xff8000),
-//         new THREE.Color(0xffbf00),
-//         new THREE.Color(0xffff00), // Yellow
-//         new THREE.Color(0xbfff00),
-//         new THREE.Color(0x80ff00),
-//         new THREE.Color(0x40ff00),
-//         new THREE.Color(0x00ff40),
-//         new THREE.Color(0x00ff00)  // Green
-//     ];
-
-//     // Calculate the appropriate indices for the two closest colors in the gradient
-//     const index = Math.floor(normalizedTraffic * (gradient.length - 1));
-//     const nextIndex = index + 1 < gradient.length ? index + 1 : index; // Ensure not exceeding bounds
-//     const remainder = normalizedTraffic * (gradient.length - 1) - index;
-
-//     // Create a new color to store the interpolated result
-//     let color = new THREE.Color();
-
-//     // Perform the interpolation between the two closest colors
-//     color.lerpColors(gradient[index], gradient[nextIndex], remainder);
-
-//     return color;
-// }
-
 function interpolateColor(trafficCount, maxTraffic) {
-    // Ensure trafficCount is at least 1 to avoid negative infinity in logarithm
-    trafficCount = Math.max(1, trafficCount);
-    
-    // Apply logarithmic scale transformation
-    const logTraffic = Math.log(trafficCount);
-    const logMaxTraffic = Math.log(maxTraffic); // maxTraffic should be the max observed traffic count
+    // Normalize the traffic count to a 0-1 range directly without logarithmic scaling
+    const normalizedTraffic = Math.min(Math.max(trafficCount / maxTraffic, 0), 1);
 
-    // Normalize the log-transformed traffic count to a 0-1 range
-    const normalizedTraffic = logTraffic / logMaxTraffic;
+    // Define three key color points
+    const green = new THREE.Color(0x00ff00); // Green at 0
+    const yellow = new THREE.Color(0xffff00); // Yellow at 0.5
+    const red = new THREE.Color(0xff0000);   // Red at 1
 
-    // Define a simplified gradient of 5 colors
-    const gradient = [
-        new THREE.Color(0xff0000), // Red
-        new THREE.Color(0xff8000), // Orange-Red
-        new THREE.Color(0xffff00), // Yellow
-        new THREE.Color(0x80ff00), // Light Green
-        new THREE.Color(0x00ff00)  // Green
-    ];
-
-    // Determine the color based on normalizedTraffic
     let color = new THREE.Color();
-    if (normalizedTraffic <= 0.2) {
-        // Linear interpolation within the green range
-        color.lerpColors(gradient[4], gradient[3], normalizedTraffic / 0.2);
-    } else if (normalizedTraffic >= 0.8) {
-        // Linear interpolation within the red range
-        color.lerpColors(gradient[0], gradient[1], (normalizedTraffic - 0.8) / 0.2);
+
+    // Interpolate between green and yellow for [0, 0.3], and between yellow and red for (0.3, 1]
+    if (normalizedTraffic <= 0.3) {
+        // Scaling normalizedTraffic to [0,1] for the green to yellow transition
+        const greenToYellowScale = normalizedTraffic / 0.1;
+        color.lerpColors(green, yellow, greenToYellowScale);
     } else {
-        // Intermediate values - calculate which two colors to interpolate between
-        const scale = (normalizedTraffic - 0.2) / 0.6; // Scale 0-1 within the intermediate range
-        const intermediateIndex = Math.floor(scale * 2); // 0 or 1 for selecting intermediate colors
-        color.lerpColors(gradient[intermediateIndex + 1], gradient[intermediateIndex + 2], (scale % 0.5) * 2);
+        // Scaling normalizedTraffic from [0.3,1] to [0,1] for the yellow to red transition
+        const yellowToRedScale = (normalizedTraffic - 0.1) / 0.9;
+        color.lerpColors(yellow, red, yellowToRedScale);
     }
 
     return color;
 }
+
 
 
 function createParticles(path, count, maxTraffic) {
