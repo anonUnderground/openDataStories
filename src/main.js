@@ -67,6 +67,25 @@ function init() {
         console.error('Element with ID "maxParticles" was not found.');
     }
 
+    const minTripCountElement = document.getElementById('minTripCount');
+    const minTripCountValueElement = document.getElementById('minTripCountValue'); // Assuming you have a span to display this value
+
+    if (minTripCountElement) {
+        minTripCountElement.addEventListener('input', function() {
+            globalMinTripCount = parseInt(this.value, 10);
+            if(minTripCountValueElement) {
+                minTripCountValueElement.textContent = this.value; // Update display value next to the slider
+            }
+            console.log("Min trip count set to:", globalMinTripCount);
+
+            // Clear the scene and redraw with updated minTripCount value
+            clearScene();
+            createParticlesForPaths(kioskPathsData, tripData, globalMaxTraffic, globalMinTripCount);
+        });
+    } else {
+        console.error('Element with ID "minTripCount" was not found.');
+    }
+
     camera.position.set(30, 30, 30);
     camera.lookAt(0, 0, 0);
 
@@ -257,4 +276,38 @@ function animate() {
     });
     controls.update();
     renderer.render(scene, camera);
+
+    setTimeout(saveAsImage, 10000);
 }
+
+function saveAsImage() {
+    renderer.render(scene, camera); // Ensure the scene is rendered before capturing
+    var imgData;
+    try {
+        var strMime = "image/jpeg";
+        var strDownloadMime = "image/octet-stream";
+        imgData = renderer.domElement.toDataURL(strMime);
+        saveFile(imgData.replace(strMime, strDownloadMime), "test.jpg");
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+}
+
+// You might want to call this function at a specific moment, for example, after a user action or after the scene has fully loaded and rendered
+// setTimeout(saveAsImage, 10000); // Delayed execution of saveAsImage, adjust timing as needed
+
+var saveFile = function (strData, filename) {
+    var link = document.createElement('a');
+    if (typeof link.download === 'string') {
+        document.body.appendChild(link); //Firefox requires the link to be in the body
+        link.download = filename;
+        link.href = strData;
+        link.click();
+        document.body.removeChild(link); //remove the link when done
+    } else {
+        location.replace(strData);
+    }
+};
+
+// Ensure this function is called after the scene has had a chance to render, which might involve placing it inside your animation loop or after a significant event or delay.
